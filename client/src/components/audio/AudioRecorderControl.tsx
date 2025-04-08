@@ -42,18 +42,18 @@ const AudioRecorderControl: React.FC<AudioRecorderControlProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden mb-6">
-      <div className="p-3 bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-        <h2 className="text-gray-700 dark:text-gray-200 font-medium">Record New Audio</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden mb-6 border border-gray-100 dark:border-gray-700">
+      <div className="p-3 bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 border-b border-gray-200 dark:border-gray-600">
+        <h2 className="text-gray-700 dark:text-gray-200 font-medium bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">Record New Audio</h2>
       </div>
       <div className="p-6 flex flex-col items-center">
         <Progress 
           value={recordingProgress} 
-          className="w-full max-w-md bg-gray-100 dark:bg-gray-700 h-4 mb-6"
+          className="w-full max-w-md bg-gray-100 dark:bg-gray-700 h-5 mb-6"
         />
         
         <div className="text-center mb-8">
-          <div className="text-4xl font-mono text-gray-700 dark:text-gray-200 mb-2">
+          <div className="text-5xl font-mono bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent mb-2 font-semibold">
             {formatTime(recordingTime)}
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400">Recording time</p>
@@ -64,8 +64,10 @@ const AudioRecorderControl: React.FC<AudioRecorderControlProps> = ({
             id="record-button"
             variant={isRecording ? "secondary" : "destructive"}
             size="lg"
-            className={`rounded-full w-16 h-16 flex items-center justify-center ${
-              isRecording ? 'bg-gray-600' : 'bg-red-600 hover:bg-red-700'
+            className={`rounded-full w-16 h-16 flex items-center justify-center shadow-md ${
+              isRecording 
+                ? 'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700' 
+                : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
             }`}
             onClick={isRecording ? onStopRecording : onStartRecording}
           >
@@ -75,18 +77,22 @@ const AudioRecorderControl: React.FC<AudioRecorderControlProps> = ({
           <Button 
             id="pause-button"
             variant="secondary"
-            className="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-full w-12 h-12 flex items-center justify-center disabled:opacity-50"
-            disabled={!isRecording || !isPaused}
+            className={`text-gray-700 dark:text-gray-200 font-medium rounded-full w-12 h-12 flex items-center justify-center shadow-md disabled:opacity-50 ${
+              isPaused 
+                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600' 
+                : 'bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700'
+            }`}
+            disabled={!isRecording}
             onClick={isPaused ? onResumeRecording : onPauseRecording}
           >
             <span className="material-icons">{isPaused ? 'play_arrow' : 'pause'}</span>
           </Button>
           
-          {isRecording && 
+          {isRecording && !isPaused &&
             <Button 
               id="stop-button"
               variant="secondary"
-              className="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-full w-12 h-12 flex items-center justify-center"
+              className="bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 text-gray-700 dark:text-gray-200 font-medium rounded-full w-12 h-12 flex items-center justify-center shadow-md"
               onClick={onStopRecording}
             >
               <span className="material-icons">stop</span>
@@ -110,7 +116,7 @@ const AudioRecorderControl: React.FC<AudioRecorderControlProps> = ({
             <Button
               id="save-recording"
               variant="default"
-              className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-r-md flex items-center disabled:opacity-50"
+              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-2 px-4 rounded-r-md flex items-center disabled:opacity-50 shadow-md"
               disabled={!canSave || isSaving}
               onClick={onSaveRecording}
             >

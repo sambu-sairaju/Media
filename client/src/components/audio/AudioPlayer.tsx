@@ -105,11 +105,11 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
   return (
     <div className="flex flex-col items-center">
-      <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-white mb-4">
+      <div className="w-16 h-16 rounded-full bg-gradient-to-r from-primary to-primary-dark flex items-center justify-center text-white mb-4 shadow-md">
         <span className="material-icons text-3xl">music_note</span>
       </div>
       
-      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">{recording.name}</h3>
+      <h3 className="text-lg font-medium bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent mb-1">{recording.name}</h3>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
         {new Date(recording.dateRecorded).toLocaleDateString('en-US', {
           year: 'numeric',
@@ -127,7 +127,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
       
       <div className="w-full max-w-2xl mb-4">
         <div className="flex items-center">
-          <span className="text-xs text-gray-500 dark:text-gray-400 w-12 text-right pr-2">
+          <span className="text-sm font-mono text-gray-500 dark:text-gray-400 w-12 text-right pr-2">
             {formatTime(currentTime)}
           </span>
           <div className="flex-1 mx-2">
@@ -137,10 +137,10 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
               max={100}
               step={0.1}
               onValueChange={handleSeek}
-              className="h-2"
+              className="h-3"
             />
           </div>
-          <span className="text-xs text-gray-500 dark:text-gray-400 w-12 pl-2">
+          <span className="text-sm font-mono text-gray-500 dark:text-gray-400 w-12 pl-2">
             {formatTime(duration)}
           </span>
         </div>
@@ -149,63 +149,72 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
       <div className="flex items-center space-x-6">
         <Button
           variant="ghost"
-          className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+          className="text-primary hover:text-primary-dark rounded-full hover:bg-primary/10"
           onClick={() => skip(-10)}
         >
           <span className="material-icons text-xl">replay_10</span>
         </Button>
         <Button
-          className="bg-primary hover:bg-primary-dark text-white rounded-full w-12 h-12 flex items-center justify-center"
+          className="bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary text-white rounded-full w-14 h-14 flex items-center justify-center shadow-md"
           onClick={togglePlayPause}
         >
-          <span className="material-icons">{isPlaying ? 'pause' : 'play_arrow'}</span>
+          <span className="material-icons text-2xl">{isPlaying ? 'pause' : 'play_arrow'}</span>
         </Button>
         <Button
           variant="ghost"
-          className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+          className="text-primary hover:text-primary-dark rounded-full hover:bg-primary/10"
           onClick={() => skip(10)}
         >
           <span className="material-icons text-xl">forward_10</span>
         </Button>
       </div>
       
-      <div className="flex items-center mt-6 space-x-4">
-        <Button
-          variant="ghost"
-          className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-        >
-          <span className="material-icons">volume_up</span>
-        </Button>
-        <Slider
-          value={[volume]}
-          min={0}
-          max={100}
-          step={1}
-          onValueChange={(value) => onVolumeChange(value[0])}
-          className="w-32 h-2"
-        />
-        <Button
-          variant="ghost"
-          className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-        >
-          <span className="material-icons">speed</span>
-        </Button>
-        <Select
-          value={playbackRate.toString()}
-          onValueChange={(value) => onPlaybackRateChange(parseFloat(value))}
-        >
-          <SelectTrigger className="text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded py-1 px-2 text-gray-700 dark:text-gray-200 w-20">
-            <SelectValue placeholder="1x" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="0.5">0.5x</SelectItem>
-            <SelectItem value="0.75">0.75x</SelectItem>
-            <SelectItem value="1">1x</SelectItem>
-            <SelectItem value="1.25">1.25x</SelectItem>
-            <SelectItem value="1.5">1.5x</SelectItem>
-            <SelectItem value="2">2x</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex items-center mt-6 space-x-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            className="text-primary hover:text-primary-dark"
+            size="sm"
+          >
+            <span className="material-icons">volume_up</span>
+          </Button>
+          <Slider
+            value={[volume]}
+            min={0}
+            max={100}
+            step={1}
+            onValueChange={(value) => onVolumeChange(value[0])}
+            className="w-24 h-2"
+          />
+        </div>
+        
+        <div className="h-8 border-l border-gray-200 dark:border-gray-700"></div>
+        
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            className="text-primary hover:text-primary-dark"
+            size="sm"
+          >
+            <span className="material-icons">speed</span>
+          </Button>
+          <Select
+            value={playbackRate.toString()}
+            onValueChange={(value) => onPlaybackRateChange(parseFloat(value))}
+          >
+            <SelectTrigger className="text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded py-1 px-2 text-gray-700 dark:text-gray-200 w-20 h-8">
+              <SelectValue placeholder="1x" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0.5">0.5x</SelectItem>
+              <SelectItem value="0.75">0.75x</SelectItem>
+              <SelectItem value="1">1x</SelectItem>
+              <SelectItem value="1.25">1.25x</SelectItem>
+              <SelectItem value="1.5">1.5x</SelectItem>
+              <SelectItem value="2">2x</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
     </div>
   );

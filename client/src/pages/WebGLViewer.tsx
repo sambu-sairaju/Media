@@ -99,14 +99,14 @@ const WebGLViewer = () => {
     <section className="p-4 md:p-6 max-w-5xl mx-auto">
       <header className="mb-6 flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-medium text-gray-800 dark:text-white">WebGL Viewer</h1>
+          <h1 className="text-2xl font-medium bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">WebGL Viewer</h1>
           <p className="text-gray-600 dark:text-gray-300 mt-1">Explore 3D models and WebGL content</p>
         </div>
         <div>
           <Button
             onClick={handleUpload}
             disabled={uploadMutation.isPending}
-            className="bg-primary hover:bg-primary/90 text-white"
+            className="bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary text-white shadow-md"
           >
             <span className="material-icons mr-2">3d_rotation</span>
             {uploadMutation.isPending ? 'Uploading...' : 'Upload 3D Model'}

@@ -164,7 +164,7 @@ const AudioReview = () => {
   return (
     <section className="p-4 md:p-6 max-w-5xl mx-auto">
       <header className="mb-6">
-        <h1 className="text-2xl font-medium text-gray-800 dark:text-white">Audio Review</h1>
+        <h1 className="text-2xl font-medium bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">Audio Review</h1>
         <p className="text-gray-600 dark:text-gray-300 mt-1">Manage and review all your recorded audio files</p>
       </header>
       
@@ -177,7 +177,7 @@ const AudioReview = () => {
               <Input 
                 type="text" 
                 className="pl-10" 
-                placeholder="Search recordings..." 
+                placeholder="Filter recordings..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
