@@ -211,5 +211,157 @@ export class MemStorage implements IStorage {
   }
 }
 
+// Database storage implementation
+import { db } from "./db";
+import { eq } from "drizzle-orm";
+
+export class DatabaseStorage implements IStorage {
+  // User methods
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  // Media file methods
+  async getMediaFiles(fileType?: string): Promise<MediaFile[]> {
+    if (fileType) {
+      return db.select().from(mediaFiles).where(eq(mediaFiles.fileType, fileType));
+    }
+    return db.select().from(mediaFiles);
+  }
+
+  async getMediaFileById(id: number): Promise<MediaFile | undefined> {
+    const [file] = await db.select().from(mediaFiles).where(eq(mediaFiles.id, id));
+    return file || undefined;
+  }
+
+  async createMediaFile(file: InsertMediaFile): Promise<MediaFile> {
+    const [mediaFile] = await db
+      .insert(mediaFiles)
+      .values(file)
+      .returning();
+    return mediaFile;
+  }
+
+  async deleteMediaFile(id: number): Promise<boolean> {
+    // Get the file info to delete the physical file
+    const [file] = await db.select().from(mediaFiles).where(eq(mediaFiles.id, id));
+    if (!file) return false;
+
+    try {
+      // Delete file from filesystem
+      const filePath = path.join(process.cwd(), 'uploads', file.fileType + 's', file.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      
+      // Delete from database
+      await db.delete(mediaFiles).where(eq(mediaFiles.id, id));
+      return true;
+    } catch (error) {
+      console.error(`Error deleting media file ${id}:`, error);
+      return false;
+    }
+  }
+
+  // Audio recording methods
+  async getAudioRecordings(): Promise<AudioRecording[]> {
+    return db.select().from(audioRecordings);
+  }
+
+  async getAudioRecordingById(id: number): Promise<AudioRecording | undefined> {
+    const [recording] = await db.select().from(audioRecordings).where(eq(audioRecordings.id, id));
+    return recording || undefined;
+  }
+
+  async createAudioRecording(recording: InsertAudioRecording): Promise<AudioRecording> {
+    const [audioRecording] = await db
+      .insert(audioRecordings)
+      .values(recording)
+      .returning();
+    return audioRecording;
+  }
+
+  async updateAudioRecording(id: number, updates: Partial<AudioRecording>): Promise<AudioRecording | undefined> {
+    const [updatedRecording] = await db
+      .update(audioRecordings)
+      .set(updates)
+      .where(eq(audioRecordings.id, id))
+      .returning();
+    return updatedRecording || undefined;
+  }
+
+  async deleteAudioRecording(id: number): Promise<boolean> {
+    const [recording] = await db.select().from(audioRecordings).where(eq(audioRecordings.id, id));
+    if (!recording) return false;
+
+    try {
+      // Delete file from filesystem
+      const filePath = path.join(process.cwd(), 'uploads', 'audio', recording.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      
+      // Delete from database
+      await db.delete(audioRecordings).where(eq(audioRecordings.id, id));
+      return true;
+    } catch (error) {
+      console.error(`Error deleting audio recording ${id}:`, error);
+      return false;
+    }
+  }
+
+  // WebGL asset methods
+  async getWebGLAssets(): Promise<WebglAsset[]> {
+    return db.select().from(webglAssets);
+  }
+
+  async getWebGLAssetById(id: number): Promise<WebglAsset | undefined> {
+    const [asset] = await db.select().from(webglAssets).where(eq(webglAssets.id, id));
+    return asset || undefined;
+  }
+
+  async createWebGLAsset(asset: InsertWebglAsset): Promise<WebglAsset> {
+    const [webglAsset] = await db
+      .insert(webglAssets)
+      .values(asset)
+      .returning();
+    return webglAsset;
+  }
+
+  async deleteWebGLAsset(id: number): Promise<boolean> {
+    const [asset] = await db.select().from(webglAssets).where(eq(webglAssets.id, id));
+    if (!asset) return false;
+
+    try {
+      // Delete file from filesystem
+      const filePath = path.join(process.cwd(), 'uploads', 'webgl', asset.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      
+      // Delete from database
+      await db.delete(webglAssets).where(eq(webglAssets.id, id));
+      return true;
+    } catch (error) {
+      console.error(`Error deleting WebGL asset ${id}:`, error);
+      return false;
+    }
+  }
+}
+
 // Export a singleton instance
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
