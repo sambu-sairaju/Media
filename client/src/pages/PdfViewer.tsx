@@ -141,7 +141,7 @@ const PdfViewer = () => {
             disabled={uploadMutation.isPending}
             className="bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary text-white shadow-md"
           >
-            <span className="material-icons mr-2">upload_file</span>
+            <i className="material-icons mr-2">upload_file</i>
             {uploadMutation.isPending ? 'Uploading...' : 'Upload PDF'}
           </Button>
           <Input

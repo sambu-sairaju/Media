@@ -108,7 +108,7 @@ const WebGLViewer = () => {
             disabled={uploadMutation.isPending}
             className="bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary text-white shadow-md"
           >
-            <span className="material-icons mr-2">3d_rotation</span>
+            <i className="material-icons mr-2">3d_rotation</i>
             {uploadMutation.isPending ? 'Uploading...' : 'Upload 3D Model'}
           </Button>
           <Input

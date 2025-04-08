@@ -84,7 +84,7 @@ const VideoPlayer = () => {
             disabled={uploadMutation.isPending}
             className="bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary text-white shadow-md"
           >
-            <span className="material-icons mr-2">upload</span>
+            <i className="material-icons mr-2">upload</i>
             {uploadMutation.isPending ? 'Uploading...' : 'Upload Video'}
           </Button>
           <Input
@@ -127,7 +127,7 @@ const VideoPlayer = () => {
         <div className="bg-black aspect-video w-full">
           {loadingSelectedVideo ? (
             <div className="w-full h-full flex items-center justify-center bg-gray-800">
-              <span className="material-icons text-6xl text-gray-600 animate-pulse">videocam</span>
+              <i className="material-icons text-6xl text-gray-600 animate-pulse">videocam</i>
             </div>
           ) : selectedVideo ? (
             <video

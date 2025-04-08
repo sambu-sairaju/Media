@@ -121,7 +121,7 @@ const AudioRecorder = () => {
             <CardTitle className="text-gray-700 dark:text-gray-200 text-base font-medium">Recent Recordings</CardTitle>
             <a href="/audio-review" className="text-primary hover:text-primary-dark text-sm flex items-center">
               <span>View All</span>
-              <span className="material-icons text-base ml-1">arrow_forward</span>
+              <i className="material-icons text-base ml-1">arrow_forward</i>
             </a>
           </CardHeader>
           <CardContent className="p-4">
