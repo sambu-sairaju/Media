@@ -47,6 +47,7 @@ export const audioRecordings = pgTable("audio_recordings", {
   size: integer("size").notNull(),
   duration: integer("duration").notNull(), // in seconds
   dateRecorded: timestamp("date_recorded").defaultNow().notNull(),
+  format: text("format").notNull(), // audio format (e.g., "audio/webm", "audio/mp3")
 });
 
 export const insertAudioRecordingSchema = createInsertSchema(audioRecordings).omit({

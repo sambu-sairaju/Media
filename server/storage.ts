@@ -363,5 +363,8 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
+// For simplicity, we'll use in-memory storage for now
+// We can switch to MongoDB or SQL storage later as needed
+
 // Export a singleton instance
-export const storage = new DatabaseStorage();
+export const storage = new MemStorage();

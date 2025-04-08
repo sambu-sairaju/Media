@@ -1,10 +1,34 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import fs from "fs";
+import path from "path";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Create necessary upload directories
+const createUploadDirectories = () => {
+  const baseDir = path.join(process.cwd(), 'uploads');
+  const directories = [
+    baseDir,
+    path.join(baseDir, 'videos'),
+    path.join(baseDir, 'pdfs'),
+    path.join(baseDir, 'audio'),
+    path.join(baseDir, 'webgl')
+  ];
+  
+  directories.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+      log(`Created directory: ${dir}`);
+    }
+  });
+};
+
+// Create upload directories
+createUploadDirectories();
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -37,6 +61,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Create server with routes
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
