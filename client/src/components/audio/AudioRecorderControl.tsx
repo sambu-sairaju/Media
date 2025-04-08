@@ -82,15 +82,16 @@ const AudioRecorderControl: React.FC<AudioRecorderControlProps> = ({
             <span className="material-icons">{isPaused ? 'play_arrow' : 'pause'}</span>
           </Button>
           
-          <Button 
-            id="stop-button"
-            variant="secondary"
-            className="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-full w-12 h-12 flex items-center justify-center disabled:opacity-50"
-            disabled={!isRecording}
-            onClick={onStopRecording}
-          >
-            <span className="material-icons">stop</span>
-          </Button>
+          {isRecording && 
+            <Button 
+              id="stop-button"
+              variant="secondary"
+              className="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-full w-12 h-12 flex items-center justify-center"
+              onClick={onStopRecording}
+            >
+              <span className="material-icons">stop</span>
+            </Button>
+          }
         </div>
         
         <div className="mt-8 w-full max-w-md">

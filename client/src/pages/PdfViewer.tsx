@@ -1,16 +1,22 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PDFDocument from "../components/pdf/PDFDocument";
 import PDFControls from "../components/pdf/PDFControls";
 import PDFThumbnails from "../components/pdf/PDFThumbnails";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 
 const PdfViewer = () => {
   const [selectedPdfId, setSelectedPdfId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [zoom, setZoom] = useState(1);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const { data: pdfFiles, isLoading: loadingPdfs } = useQuery({
     queryKey: ['/api/pdfs'],
@@ -21,6 +27,49 @@ const PdfViewer = () => {
     queryKey: ['/api/pdfs', selectedPdfId],
     enabled: !!selectedPdfId,
   });
+  
+  const uploadMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const response = await fetch('/api/pdfs', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload PDF');
+      }
+      
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/pdfs'] });
+      toast({
+        title: "PDF uploaded successfully",
+        description: "Your PDF has been uploaded and is now available for viewing.",
+      });
+      setSelectedPdfId(data.id);
+    },
+    onError: (error) => {
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Failed to upload PDF",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const formData = new FormData();
+      formData.append('pdf', file);
+      uploadMutation.mutate(formData);
+    }
+  };
 
   // Select first PDF by default when PDFs are loaded
   useEffect(() => {
@@ -81,9 +130,29 @@ const PdfViewer = () => {
 
   return (
     <section className="p-4 md:p-6 max-w-5xl mx-auto">
-      <header className="mb-6">
-        <h1 className="text-2xl font-medium text-gray-800 dark:text-white">PDF Viewer</h1>
-        <p className="text-gray-600 dark:text-gray-300 mt-1">View and download PDF documents</p>
+      <header className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-medium text-gray-800 dark:text-white">PDF Viewer</h1>
+          <p className="text-gray-600 dark:text-gray-300 mt-1">View and download PDF documents</p>
+        </div>
+        <div>
+          <Button
+            onClick={handleUpload}
+            disabled={uploadMutation.isPending}
+            className="bg-primary hover:bg-primary/90 text-white"
+          >
+            <span className="material-icons mr-2">upload_file</span>
+            {uploadMutation.isPending ? 'Uploading...' : 'Upload PDF'}
+          </Button>
+          <Input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={handleFileChange}
+            onClick={(e) => (e.currentTarget.value = '')}
+          />
+        </div>
       </header>
 
       <Card className="mb-6">

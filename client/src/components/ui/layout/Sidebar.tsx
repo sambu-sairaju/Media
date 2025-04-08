@@ -24,15 +24,14 @@ const Sidebar = () => {
             const isActive = location === item.href;
             return (
               <li key={item.href}>
-                <Link href={item.href}>
-                  <a
-                    className={`flex items-center px-4 py-3 text-gray-700 hover:bg-primary hover:text-white rounded mx-2 ${
-                      isActive ? "bg-primary text-white" : ""
-                    }`}
-                  >
-                    <span className="material-icons mr-3">{item.icon}</span>
-                    <span>{item.label}</span>
-                  </a>
+                <Link 
+                  href={item.href}
+                  className={`flex items-center px-4 py-3 text-gray-700 hover:bg-primary hover:text-white rounded mx-2 ${
+                    isActive ? "bg-primary text-white" : ""
+                  }`}
+                >
+                  <span className="material-icons mr-3">{item.icon}</span>
+                  <span>{item.label}</span>
                 </Link>
               </li>
             );

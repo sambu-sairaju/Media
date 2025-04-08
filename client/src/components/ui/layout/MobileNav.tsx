@@ -17,11 +17,13 @@ const MobileNav = () => {
         {navigationItems.map((item) => {
           const isActive = location === item.href;
           return (
-            <Link key={item.href} href={item.href}>
-              <a className={`flex flex-col items-center p-3 ${isActive ? "text-primary" : "text-gray-700 hover:text-primary"}`}>
-                <span className="material-icons">{item.icon}</span>
-                <span className="text-xs mt-1">{item.label}</span>
-              </a>
+            <Link 
+              key={item.href} 
+              href={item.href}
+              className={`flex flex-col items-center p-3 ${isActive ? "text-primary" : "text-gray-700 hover:text-primary"}`}
+            >
+              <span className="material-icons">{item.icon}</span>
+              <span className="text-xs mt-1">{item.label}</span>
             </Link>
           );
         })}

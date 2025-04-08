@@ -1,13 +1,17 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import WebGLRenderer from "../components/webgl/WebGLRenderer";
 import WebGLControls from "../components/webgl/WebGLControls";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 
 const backgrounds = [
   { value: "black", class: "bg-gray-900" },
@@ -23,6 +27,8 @@ const WebGLViewer = () => {
   const [backgroundColor, setBackgroundColor] = useState("black");
   const [lighting, setLighting] = useState("natural");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const { data: webglModels, isLoading: loadingModels } = useQuery({
     queryKey: ['/api/webgl'],
@@ -33,6 +39,50 @@ const WebGLViewer = () => {
     queryKey: ['/api/webgl', selectedModelId],
     enabled: !!selectedModelId,
   });
+  
+  const uploadMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const response = await fetch('/api/webgl', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload WebGL model');
+      }
+      
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/webgl'] });
+      toast({
+        title: "Model uploaded successfully",
+        description: "Your 3D model has been uploaded and is now available for viewing.",
+      });
+      setSelectedModelId(data.id);
+    },
+    onError: (error) => {
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Failed to upload 3D model",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const formData = new FormData();
+      formData.append('model', file);
+      formData.append('name', file.name);
+      uploadMutation.mutate(formData);
+    }
+  };
 
   // Select first model by default when models are loaded
   useEffect(() => {
@@ -47,9 +97,29 @@ const WebGLViewer = () => {
 
   return (
     <section className="p-4 md:p-6 max-w-5xl mx-auto">
-      <header className="mb-6">
-        <h1 className="text-2xl font-medium text-gray-800 dark:text-white">WebGL Viewer</h1>
-        <p className="text-gray-600 dark:text-gray-300 mt-1">Explore 3D models and WebGL content</p>
+      <header className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-medium text-gray-800 dark:text-white">WebGL Viewer</h1>
+          <p className="text-gray-600 dark:text-gray-300 mt-1">Explore 3D models and WebGL content</p>
+        </div>
+        <div>
+          <Button
+            onClick={handleUpload}
+            disabled={uploadMutation.isPending}
+            className="bg-primary hover:bg-primary/90 text-white"
+          >
+            <span className="material-icons mr-2">3d_rotation</span>
+            {uploadMutation.isPending ? 'Uploading...' : 'Upload 3D Model'}
+          </Button>
+          <Input
+            ref={fileInputRef}
+            type="file"
+            accept=".glb,.gltf,.obj,.fbx"
+            className="hidden"
+            onChange={handleFileChange}
+            onClick={(e) => (e.currentTarget.value = '')}
+          />
+        </div>
       </header>
 
       <Card className="mb-6">

@@ -1,11 +1,17 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useRef } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import VideoCard from "../components/video/VideoCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 
 const VideoPlayer = () => {
   const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const { data: videos, isLoading: loadingVideos } = useQuery({
     queryKey: ['/api/videos'],
@@ -17,6 +23,49 @@ const VideoPlayer = () => {
     enabled: !!selectedVideoId,
   });
 
+  const uploadMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const response = await fetch('/api/videos', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload video');
+      }
+      
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/videos'] });
+      toast({
+        title: "Video uploaded successfully",
+        description: "Your video has been uploaded and is now available for streaming.",
+      });
+      setSelectedVideoId(data.id);
+    },
+    onError: (error) => {
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Failed to upload video",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const formData = new FormData();
+      formData.append('video', file);
+      uploadMutation.mutate(formData);
+    }
+  };
+
   // Select first video by default when videos are loaded
   if (videos?.length && !selectedVideoId && !selectedVideo) {
     setSelectedVideoId(videos[0].id);
@@ -24,9 +73,29 @@ const VideoPlayer = () => {
 
   return (
     <section className="p-4 md:p-6 max-w-5xl mx-auto">
-      <header className="mb-6">
-        <h1 className="text-2xl font-medium text-gray-800 dark:text-white">Video Streaming</h1>
-        <p className="text-gray-600 dark:text-gray-300 mt-1">Stream videos directly without downloading</p>
+      <header className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-medium text-gray-800 dark:text-white">Video Streaming</h1>
+          <p className="text-gray-600 dark:text-gray-300 mt-1">Stream videos directly without downloading</p>
+        </div>
+        <div>
+          <Button
+            onClick={handleUpload}
+            disabled={uploadMutation.isPending}
+            className="bg-primary hover:bg-primary/90 text-white"
+          >
+            <span className="material-icons mr-2">upload</span>
+            {uploadMutation.isPending ? 'Uploading...' : 'Upload Video'}
+          </Button>
+          <Input
+            ref={fileInputRef}
+            type="file"
+            accept="video/*"
+            className="hidden"
+            onChange={handleFileChange}
+            onClick={(e) => (e.currentTarget.value = '')}
+          />
+        </div>
       </header>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden mb-6">
