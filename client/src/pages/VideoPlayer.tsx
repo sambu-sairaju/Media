@@ -38,12 +38,31 @@ const VideoPlayer = () => {
       return await response.json();
     },
     onSuccess: (data) => {
+      // First get the full list of videos, then select one
       queryClient.invalidateQueries({ queryKey: ['/api/videos'] });
-      toast({
-        title: "Video uploaded successfully",
-        description: "Your video has been uploaded and is now available for streaming.",
-      });
-      setSelectedVideoId(data.id);
+      
+      // Make sure we have a valid ID before setting it
+      if (data && data.id) {
+        setSelectedVideoId(data.id);
+        toast({
+          title: "Video uploaded successfully",
+          description: "Your video has been uploaded and is now available for streaming.",
+        });
+      } else {
+        // Fetch videos again to get a valid ID
+        fetch('/api/videos')
+          .then(response => response.json())
+          .then(videos => {
+            if (videos && videos.length > 0) {
+              setSelectedVideoId(videos[0].id);
+            }
+          });
+        
+        toast({
+          title: "Video processed",
+          description: "Your video has been uploaded and is being prepared for streaming.",
+        });
+      }
     },
     onError: (error) => {
       toast({

@@ -4,8 +4,15 @@ import type { MediaFile } from '@shared/schema';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Document, Page, pdfjs } from 'react-pdf';
 
-// Set up PDFJS worker with a reliable CDN that works with React
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Simple and reliable approach to avoid CDN issues
+if (typeof window !== 'undefined') {
+  // Create a blob URL directly in the browser to avoid CDN issues
+  const pdfjsWorker = `
+    importScripts('https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js');
+  `;
+  const blob = new Blob([pdfjsWorker], { type: 'application/javascript' });
+  pdfjs.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
+}
 
 interface PDFDocumentProps {
   selectedPdf: MediaFile | undefined;
