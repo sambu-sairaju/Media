@@ -10,6 +10,7 @@ import PDFControls from "../components/pdf/PDFControls";
 import PDFThumbnails from "../components/pdf/PDFThumbnails";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import type { MediaFile } from "@shared/schema";
 
 const PdfViewer = () => {
   const [selectedPdfId, setSelectedPdfId] = useState<number | null>(null);
@@ -18,12 +19,13 @@ const PdfViewer = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const { data: pdfFiles, isLoading: loadingPdfs } = useQuery({
+  // Add proper type annotations for our query results
+  const { data: pdfFiles = [], isLoading: loadingPdfs } = useQuery<MediaFile[]>({
     queryKey: ['/api/pdfs'],
     staleTime: 60000, // 1 minute
   });
 
-  const { data: selectedPdf, isLoading: loadingSelectedPdf } = useQuery({
+  const { data: selectedPdf, isLoading: loadingSelectedPdf } = useQuery<MediaFile | undefined>({
     queryKey: ['/api/pdfs', selectedPdfId],
     enabled: !!selectedPdfId,
   });
@@ -42,12 +44,31 @@ const PdfViewer = () => {
       return await response.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/pdfs'] });
+      // Show success toast
       toast({
         title: "PDF uploaded successfully",
         description: "Your PDF has been uploaded and is now available for viewing.",
       });
-      setSelectedPdfId(data.id);
+      
+      // Force fetch the latest PDFs directly 
+      fetch('/api/pdfs')
+        .then(response => response.json())
+        .then(pdfs => {
+          // Update the PDF list
+          queryClient.setQueryData(['/api/pdfs'], pdfs);
+          
+          // Select the newly uploaded PDF if valid
+          if (pdfs && pdfs.length > 0) {
+            // Find the PDF with matching ID or select the first one
+            const uploadedPdf = data && data.id ? 
+              pdfs.find((p: any) => p.id === data.id) : 
+              pdfs[0];
+              
+            if (uploadedPdf) {
+              setSelectedPdfId(uploadedPdf.id);
+            }
+          }
+        });
     },
     onError: (error) => {
       toast({

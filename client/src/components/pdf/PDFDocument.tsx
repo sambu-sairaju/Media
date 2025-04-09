@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import type { MediaFile } from '@shared/schema';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Completely remove the react-pdf dependency that's causing problems
+// Simple PDF Viewer that uses browser's built-in PDF renderer
 
 interface PDFDocumentProps {
   selectedPdf: MediaFile | undefined;
@@ -20,31 +20,8 @@ const PDFDocument: React.FC<PDFDocumentProps> = ({
   loading,
   onDownloadPage 
 }) => {
-  const [pdfDocument, setPdfDocument] = useState<any>(null);
-  const [pageLoading, setPageLoading] = useState(true);
-  const [renderError, setRenderError] = useState<Error | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  // We removed all the PDF.js dependencies and use simple iframe instead
 
-  useEffect(() => {
-    setPageLoading(true);
-  }, [currentPage, selectedPdf]);
-
-  const handleDocumentLoadSuccess = (pdf: any) => {
-    setPdfDocument(pdf);
-  };
-
-  const handlePageLoadSuccess = () => {
-    setPageLoading(false);
-    setRenderError(null);
-  };
-
-  const handleDocumentLoadError = (error: Error) => {
-    console.error('Error loading PDF document:', error);
-    setRenderError(error);
-  };
-
-  // Use a simple iframe to display PDFs instead of react-pdf
-  // This is a much more reliable approach that works in all browsers
   return (
     <div className="pdf-container bg-gray-50 dark:bg-gray-900 p-4 flex justify-center min-h-[60vh]">
       <div className="relative w-full max-w-3xl">
@@ -58,14 +35,6 @@ const PDFDocument: React.FC<PDFDocumentProps> = ({
               src={`/api/pdfs/${selectedPdf.id}/view`}
               className="w-full h-full border-0"
               title="PDF Viewer"
-              onLoad={() => {
-                setPageLoading(false);
-                setRenderError(null);
-              }}
-              onError={(e) => {
-                console.error('Error loading PDF:', e);
-                setRenderError(new Error('Failed to load PDF'));
-              }}
             />
           </div>
         ) : (
@@ -80,7 +49,7 @@ const PDFDocument: React.FC<PDFDocumentProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onDownloadPage()}
+                onClick={onDownloadPage}
                 className="bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium inline-flex items-center text-sm"
               >
                 <span className="material-icons mr-1 text-sm">file_download</span>

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { MediaFile } from "@shared/schema";
 import VideoCard from "../components/video/VideoCard";
+import SimpleVideoPlayer from "../components/video/SimpleVideoPlayer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -158,19 +159,8 @@ const VideoPlayer = () => {
             <div className="w-full h-full flex items-center justify-center bg-gray-800">
               <i className="material-icons text-6xl text-gray-600 animate-pulse">videocam</i>
             </div>
-          ) : selectedVideo ? (
-            <video
-              className="w-full h-full"
-              controls
-              autoPlay
-              src={`/api/videos/${selectedVideo?.id}/stream`}
-            >
-              Your browser does not support the video tag.
-            </video>
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-800">
-              <span className="text-gray-400">No video selected</span>
-            </div>
+            <SimpleVideoPlayer video={selectedVideo} autoPlay={true} />
           )}
         </div>
       </div>
