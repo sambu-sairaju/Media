@@ -25,27 +25,57 @@ ensureDir(path.join(UPLOAD_DIR, 'pdfs'));
 ensureDir(path.join(UPLOAD_DIR, 'audio'));
 ensureDir(path.join(UPLOAD_DIR, 'webgl'));
 
-// Configure multer for file uploads
+// Update multer configuration to apply file type restrictions only for WebGL uploads
 const multerStorage = multer.diskStorage({
   destination: function (req, file, cb) {
+    console.log('Uploading file:', file.originalname);
     let dest = UPLOAD_DIR;
-    
+
     if (file.fieldname === 'video') dest = path.join(UPLOAD_DIR, 'videos');
     else if (file.fieldname === 'pdf') dest = path.join(UPLOAD_DIR, 'pdfs');
     else if (file.fieldname === 'audio') dest = path.join(UPLOAD_DIR, 'audio');
-    else if (file.fieldname === 'webgl') dest = path.join(UPLOAD_DIR, 'webgl');
-    
+    else if (file.fieldname === 'webgl') {
+      dest = path.join(UPLOAD_DIR, 'webgl');
+
+      // Restrict file types for WebGL uploads
+      const allowedExtensions = ['.gltf', '.glb', '.png', '.fbx'];
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (!allowedExtensions.includes(ext)) {
+        console.error('Invalid file type for WebGL upload:', ext);
+        return cb(new Error('Invalid file type for WebGL upload'), '');
+      }
+    }
+
+    console.log('File will be saved to:', dest);
     cb(null, dest);
   },
   filename: function (req, file, cb) {
-    // Create a unique filename with original extension
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+    const filename = file.fieldname + '-' + uniqueSuffix + ext;
+    console.log('Generated filename:', filename);
+    cb(null, filename);
   }
 });
 
-const upload = multer({ storage: multerStorage });
+// Update multer configuration to allow .fbx files and increase file size limit
+const upload = multer({
+  storage: multerStorage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // Set file size limit to 50 MB
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.fieldname === 'webgl') {
+      const allowedExtensions = ['.gltf', '.glb', '.png', '.fbx'];
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (!allowedExtensions.includes(ext)) {
+        console.error('Invalid file type for WebGL upload:', ext);
+        return cb(new Error('Invalid file type for WebGL upload'));
+      }
+    }
+    cb(null, true);
+  },
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Video routes

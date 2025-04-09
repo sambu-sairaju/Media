@@ -80,21 +80,26 @@ export const serveWebGLAsset = async (req: Request, res: Response) => {
 // Upload WebGL asset
 export const uploadAsset = async (req: Request, res: Response) => {
   try {
+    console.log('Received file:', req.file);
     if (!req.file) {
+      console.error('No file uploaded');
       return res.status(400).json({ message: 'No WebGL file uploaded' });
     }
 
-    // Extract file extension to determine format
     const ext = path.extname(req.file.originalname).toLowerCase();
+    console.log('File extension:', ext);
+
     let format = 'Unknown';
-    
     if (ext === '.gltf') {
       format = 'GLTF';
     } else if (ext === '.glb') {
       format = 'GLB';
+    } else if (ext === '.png') {
+      format = 'PNG';
     }
 
-    // Validate and prepare data for insertion
+    console.log('Determined format:', format);
+
     const assetData = {
       name: req.body.name || req.file.originalname.replace(ext, ''),
       description: req.body.description || '',
@@ -103,26 +108,24 @@ export const uploadAsset = async (req: Request, res: Response) => {
       format,
     };
 
-    // Validate with Zod schema
+    console.log('Asset data:', assetData);
+
     const validationResult = insertWebglAssetSchema.safeParse(assetData);
     if (!validationResult.success) {
-      // Delete the uploaded file if validation fails
+      console.error('Validation failed:', validationResult.error);
       fs.unlinkSync(req.file.path);
       const validationError = fromZodError(validationResult.error);
       return res.status(400).json({ message: 'Invalid WebGL asset data', errors: validationError.details });
     }
 
-    // Store asset in database
     const savedAsset = await storage.createWebGLAsset(assetData);
+    console.log('Saved asset:', savedAsset);
     res.status(201).json(savedAsset);
   } catch (error) {
     console.error('Error uploading WebGL asset:', error);
-    
-    // Clean up the file if an error occurs
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
-    
     res.status(500).json({ message: 'Failed to upload WebGL asset' });
   }
 };

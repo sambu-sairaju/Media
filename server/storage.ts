@@ -363,6 +363,32 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
+// Add a function to create a WebGL asset in the database
+export const createWebGLAsset = async (assetData: {
+  name: string;
+  description: string;
+  filename: string;
+  size: number;
+  format: string;
+}) => {
+  try {
+    // Simulate database insertion (replace with actual DB logic)
+    const newAsset = {
+      id: Date.now(), // Generate a unique ID (replace with DB-generated ID)
+      ...assetData,
+      createdAt: new Date(),
+    };
+
+    // Log the new asset (replace with actual DB insertion logic)
+    console.log('WebGL asset created:', newAsset);
+
+    return newAsset;
+  } catch (error) {
+    console.error('Error creating WebGL asset:', error);
+    throw new Error('Failed to create WebGL asset');
+  }
+};
+
 // For simplicity, we'll use in-memory storage for now
 // We can switch to MongoDB or SQL storage later as needed
 
