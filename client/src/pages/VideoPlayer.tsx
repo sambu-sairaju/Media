@@ -1,12 +1,10 @@
-import { useState, useRef } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useRef, useEffect } from "react";
 import type { MediaFile } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
 
 // Super simple video player component
 const SimpleVideo = ({ videoSrc }: { videoSrc: string }) => {
@@ -48,70 +46,96 @@ const SimpleVideoCard = ({
 
 const VideoPlayer = () => {
   const [currentVideoId, setCurrentVideoId] = useState<number | null>(null);
+  const [videos, setVideos] = useState<MediaFile[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // Fetch videos
-  const { data: videos = [], isLoading: loadingVideos } = useQuery<MediaFile[]>({
-    queryKey: ['/api/videos'],
-  });
+  // Fetch videos directly from API
+  const fetchVideos = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/videos');
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Fetched videos:", data);
+        setVideos(data || []);
+        
+        // Auto-select first video if we have videos but no selection
+        if (data && data.length > 0 && !currentVideoId) {
+          setCurrentVideoId(data[0].id);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching videos:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Upload mutation
-  const uploadMutation = useMutation({
-    mutationFn: async (formData: FormData) => {
+  // Upload a video file
+  const uploadVideo = async (file: File) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('video', file);
+      
       const response = await fetch('/api/videos', {
         method: 'POST',
         body: formData,
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to upload video');
-      }
-      
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Video uploaded successfully",
-        description: "Your video has been uploaded and is now available for streaming.",
-      });
-      
-      // Important: Refetch videos after upload
-      queryClient.invalidateQueries({ queryKey: ['/api/videos'] });
-      
-      // Wait for data to refresh then select the new video
-      setTimeout(() => {
-        if (data?.id) {
+      if (response.ok) {
+        const data = await response.json();
+        toast({
+          title: "Video uploaded successfully",
+          description: "Your video has been uploaded and is now available.",
+        });
+        
+        console.log("Uploaded video data:", data);
+        
+        // Fetch videos again to update the list
+        await fetchVideos();
+        
+        // Select the newly uploaded video
+        if (data && data.id) {
           setCurrentVideoId(data.id);
         }
-      }, 500);
-    },
-    onError: (error) => {
+      } else {
+        toast({
+          title: "Upload failed",
+          description: "There was a problem uploading your video.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error uploading video:", error);
       toast({
         title: "Upload failed",
-        description: error instanceof Error ? error.message : "Failed to upload video",
+        description: "There was an error uploading your video.",
         variant: "destructive",
       });
+    } finally {
+      setUploading(false);
     }
-  });
+  };
+
+  // Load videos when component mounts
+  useEffect(() => {
+    fetchVideos();
+  }, []);
 
   // Handler for file upload
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const formData = new FormData();
-      formData.append('video', file);
-      uploadMutation.mutate(formData);
+      uploadVideo(file);
     }
   };
 
   // Current selected video
-  const currentVideo = videos.find(v => v.id === currentVideoId) || videos[0];
-  
-  // If we have videos but no selection, select the first one
-  if (videos.length > 0 && !currentVideoId && currentVideo) {
-    setCurrentVideoId(currentVideo.id);
-  }
+  const currentVideo = videos.find(v => v.id === currentVideoId) || (videos.length > 0 ? videos[0] : null);
 
   return (
     <section className="p-4 md:p-6 max-w-5xl mx-auto">
@@ -123,11 +147,11 @@ const VideoPlayer = () => {
         <div>
           <Button
             onClick={() => fileInputRef.current?.click()}
-            disabled={uploadMutation.isPending}
+            disabled={uploading}
             className="bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary text-white shadow-md"
           >
             <i className="material-icons mr-2">upload</i>
-            {uploadMutation.isPending ? 'Uploading...' : 'Upload Video'}
+            {uploading ? 'Uploading...' : 'Upload Video'}
           </Button>
           <Input
             ref={fileInputRef}
@@ -149,7 +173,7 @@ const VideoPlayer = () => {
               </CardTitle>
             </CardHeader>
             <div className="bg-black aspect-video w-full">
-              {loadingVideos ? (
+              {loading ? (
                 <div className="w-full h-full flex items-center justify-center">
                   <Skeleton className="w-full h-full" />
                 </div>
@@ -170,7 +194,7 @@ const VideoPlayer = () => {
               <CardTitle className="text-gray-700 dark:text-gray-200 text-base font-medium">Available Videos</CardTitle>
             </CardHeader>
             <CardContent className="p-4">
-              {loadingVideos ? (
+              {loading ? (
                 <div className="space-y-2">
                   {[1, 2, 3].map((n) => (
                     <Skeleton key={n} className="h-10 w-full" />

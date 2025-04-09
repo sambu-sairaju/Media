@@ -1,11 +1,9 @@
-import { useState, useRef } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
 import type { MediaFile } from "@shared/schema";
 
 // Simple PDF card component
@@ -33,70 +31,96 @@ const SimplePdfCard = ({
 
 const PdfViewer = () => {
   const [currentPdfId, setCurrentPdfId] = useState<number | null>(null);
+  const [pdfs, setPdfs] = useState<MediaFile[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // Fetch PDFs
-  const { data: pdfs = [], isLoading: loadingPdfs } = useQuery<MediaFile[]>({
-    queryKey: ['/api/pdfs'],
-  });
+  // Fetch PDFs directly from API
+  const fetchPdfs = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/pdfs');
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Fetched PDFs:", data);
+        setPdfs(data || []);
+        
+        // Auto-select first PDF if we have PDFs but no selection
+        if (data && data.length > 0 && !currentPdfId) {
+          setCurrentPdfId(data[0].id);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching PDFs:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Upload mutation
-  const uploadMutation = useMutation({
-    mutationFn: async (formData: FormData) => {
+  // Upload a PDF file
+  const uploadPdf = async (file: File) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('pdf', file);
+      
       const response = await fetch('/api/pdfs', {
         method: 'POST',
         body: formData,
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to upload PDF');
-      }
-      
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "PDF uploaded successfully",
-        description: "Your PDF has been uploaded and is now available for viewing.",
-      });
-      
-      // Important: Refetch PDFs after upload
-      queryClient.invalidateQueries({ queryKey: ['/api/pdfs'] });
-      
-      // Wait for data to refresh then select the new PDF
-      setTimeout(() => {
-        if (data?.id) {
+      if (response.ok) {
+        const data = await response.json();
+        toast({
+          title: "PDF uploaded successfully",
+          description: "Your PDF has been uploaded and is now available.",
+        });
+        
+        console.log("Uploaded PDF data:", data);
+        
+        // Fetch PDFs again to update the list
+        await fetchPdfs();
+        
+        // Select the newly uploaded PDF
+        if (data && data.id) {
           setCurrentPdfId(data.id);
         }
-      }, 500);
-    },
-    onError: (error) => {
+      } else {
+        toast({
+          title: "Upload failed",
+          description: "There was a problem uploading your PDF.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error uploading PDF:", error);
       toast({
         title: "Upload failed",
-        description: error instanceof Error ? error.message : "Failed to upload PDF",
+        description: "There was an error uploading your PDF.",
         variant: "destructive",
       });
+    } finally {
+      setUploading(false);
     }
-  });
+  };
+
+  // Load PDFs when component mounts
+  useEffect(() => {
+    fetchPdfs();
+  }, []);
 
   // Handler for file upload
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const formData = new FormData();
-      formData.append('pdf', file);
-      uploadMutation.mutate(formData);
+      uploadPdf(file);
     }
   };
 
   // Current selected PDF
-  const currentPdf = pdfs.find(p => p.id === currentPdfId) || pdfs[0];
-  
-  // If we have PDFs but no selection, select the first one
-  if (pdfs.length > 0 && !currentPdfId && currentPdf) {
-    setCurrentPdfId(currentPdf.id);
-  }
+  const currentPdf = pdfs.find(p => p.id === currentPdfId) || (pdfs.length > 0 ? pdfs[0] : null);
 
   // Handle PDF download
   const handleDownload = () => {
@@ -115,11 +139,11 @@ const PdfViewer = () => {
         <div>
           <Button
             onClick={() => fileInputRef.current?.click()}
-            disabled={uploadMutation.isPending}
+            disabled={uploading}
             className="bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary text-white shadow-md"
           >
             <i className="material-icons mr-2">upload_file</i>
-            {uploadMutation.isPending ? 'Uploading...' : 'Upload PDF'}
+            {uploading ? 'Uploading...' : 'Upload PDF'}
           </Button>
           <Input
             ref={fileInputRef}
@@ -154,7 +178,7 @@ const PdfViewer = () => {
               </div>
             </CardHeader>
             <div className="w-full bg-white dark:bg-gray-800" style={{ height: "70vh" }}>
-              {loadingPdfs ? (
+              {loading ? (
                 <div className="w-full h-full flex items-center justify-center">
                   <Skeleton className="w-full h-full" />
                 </div>
@@ -179,7 +203,7 @@ const PdfViewer = () => {
               <CardTitle className="text-gray-700 dark:text-gray-200 text-base font-medium">Available PDFs</CardTitle>
             </CardHeader>
             <CardContent className="p-4">
-              {loadingPdfs ? (
+              {loading ? (
                 <div className="space-y-2">
                   {[1, 2, 3].map((n) => (
                     <Skeleton key={n} className="h-10 w-full" />
