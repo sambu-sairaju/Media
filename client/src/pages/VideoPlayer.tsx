@@ -1,8 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { MediaFile } from "@shared/schema";
-import VideoCard from "../components/video/VideoCard";
-import SimpleVideoPlayer from "../components/video/SimpleVideoPlayer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,21 +8,55 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 
+// Super simple video player component
+const SimpleVideo = ({ videoSrc }: { videoSrc: string }) => {
+  return (
+    <video
+      className="w-full h-full"
+      controls
+      autoPlay
+      key={videoSrc} // Force remount when src changes
+    >
+      <source src={videoSrc} />
+      Your browser does not support the video tag.
+    </video>
+  );
+};
+
+// Even simpler video card component
+const SimpleVideoCard = ({ 
+  name, 
+  isActive = false, 
+  onClick 
+}: { 
+  name: string; 
+  isActive?: boolean; 
+  onClick: () => void;
+}) => {
+  return (
+    <div 
+      className={`p-2 cursor-pointer rounded ${isActive ? 'bg-primary/10' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+      onClick={onClick}
+    >
+      <div className="flex items-center">
+        <span className="material-icons mr-2 text-gray-500">movie</span>
+        <span className="truncate">{name}</span>
+      </div>
+    </div>
+  );
+};
+
 const VideoPlayer = () => {
-  const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null);
+  const [currentVideoId, setCurrentVideoId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  // Fetch videos
   const { data: videos = [], isLoading: loadingVideos } = useQuery<MediaFile[]>({
     queryKey: ['/api/videos'],
-    staleTime: 60000, // 1 minute
   });
 
-  const { data: selectedVideo, isLoading: loadingSelectedVideo } = useQuery<MediaFile>({
-    queryKey: ['/api/videos', selectedVideoId],
-    enabled: !!selectedVideoId,
-  });
-
+  // Upload mutation
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
       const response = await fetch('/api/videos', {
@@ -39,24 +71,20 @@ const VideoPlayer = () => {
       return await response.json();
     },
     onSuccess: (data) => {
-      // Show success toast
       toast({
         title: "Video uploaded successfully",
         description: "Your video has been uploaded and is now available for streaming.",
       });
       
-      // Directly set the selected video ID from the upload response first
-      if (data && data.id) {
-        console.log("Setting video ID from upload response:", data.id);
-        setSelectedVideoId(data.id);
-      }
-      
-      // Then invalidate queries to refresh the video list
+      // Important: Refetch videos after upload
       queryClient.invalidateQueries({ queryKey: ['/api/videos'] });
-      // Also refresh the selected video query
-      if (data && data.id) {
-        queryClient.invalidateQueries({ queryKey: ['/api/videos', data.id] });
-      }
+      
+      // Wait for data to refresh then select the new video
+      setTimeout(() => {
+        if (data?.id) {
+          setCurrentVideoId(data.id);
+        }
+      }, 500);
     },
     onError: (error) => {
       toast({
@@ -67,10 +95,7 @@ const VideoPlayer = () => {
     }
   });
 
-  const handleUpload = () => {
-    fileInputRef.current?.click();
-  };
-
+  // Handler for file upload
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -80,27 +105,24 @@ const VideoPlayer = () => {
     }
   };
 
-  // Select first video by default when videos are loaded
-  useEffect(() => {
-    if (videos?.length > 0) {
-      // Force-set the ID if one isn't selected or if the selection is invalid
-      if (!selectedVideoId || !videos.some(v => v.id === selectedVideoId)) {
-        console.log("Setting default video ID to:", videos[0].id);
-        setSelectedVideoId(videos[0].id);
-      }
-    }
-  }, [videos, selectedVideoId]);
+  // Current selected video
+  const currentVideo = videos.find(v => v.id === currentVideoId) || videos[0];
+  
+  // If we have videos but no selection, select the first one
+  if (videos.length > 0 && !currentVideoId && currentVideo) {
+    setCurrentVideoId(currentVideo.id);
+  }
 
   return (
     <section className="p-4 md:p-6 max-w-5xl mx-auto">
-      <header className="mb-6 flex justify-between items-center">
+      <header className="mb-6 flex flex-wrap justify-between items-center gap-4">
         <div>
           <h1 className="text-2xl font-medium bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">Video Streaming</h1>
           <p className="text-gray-600 dark:text-gray-300 mt-1">Stream videos directly without downloading</p>
         </div>
         <div>
           <Button
-            onClick={handleUpload}
+            onClick={() => fileInputRef.current?.click()}
             disabled={uploadMutation.isPending}
             className="bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary text-white shadow-md"
           >
@@ -118,116 +140,62 @@ const VideoPlayer = () => {
         </div>
       </header>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden mb-6">
-        <div className="flex flex-wrap items-center justify-between p-3 bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-          {loadingSelectedVideo ? (
-            <Skeleton className="h-6 w-64" />
-          ) : (
-            <h2 className="text-lg font-medium text-gray-700 dark:text-gray-200">
-              {selectedVideo?.originalName || "Select a video"}
-            </h2>
-          )}
-          {loadingSelectedVideo ? (
-            <div className="flex items-center">
-              <Skeleton className="h-4 w-32 mr-3" />
-              <Skeleton className="h-4 w-20" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2">
+          <Card className="overflow-hidden">
+            <CardHeader className="py-3 px-4 bg-gray-100 dark:bg-gray-700">
+              <CardTitle className="text-gray-700 dark:text-gray-200 text-base font-medium">
+                {currentVideo?.originalName || "No video selected"}
+              </CardTitle>
+            </CardHeader>
+            <div className="bg-black aspect-video w-full">
+              {loadingVideos ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Skeleton className="w-full h-full" />
+                </div>
+              ) : currentVideo ? (
+                <SimpleVideo videoSrc={`/api/videos/${currentVideo.id}/stream`} />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                  <span className="text-gray-400">No videos available</span>
+                </div>
+              )}
             </div>
-          ) : selectedVideo && (
-            <div className="flex items-center">
-              <span className="text-sm text-gray-500 dark:text-gray-400 mr-3">
-                Duration: {selectedVideo && selectedVideo.duration ? `${Math.floor(selectedVideo.duration / 60)}:${String(selectedVideo.duration % 60).padStart(2, '0')}` : '0:00'}
-              </span>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {selectedVideo?.resolution || 'Unknown'}
-              </span>
-            </div>
-          )}
+          </Card>
         </div>
 
-        <div className="bg-black aspect-video w-full">
-          {loadingSelectedVideo ? (
-            <div className="w-full h-full flex items-center justify-center bg-gray-800">
-              <i className="material-icons text-6xl text-gray-600 animate-pulse">videocam</i>
-            </div>
-          ) : (
-            <SimpleVideoPlayer video={selectedVideo} autoPlay={true} />
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {selectedVideo && (
+        <div>
           <Card>
-            <CardHeader className="py-3 px-3 bg-gray-100 dark:bg-gray-700">
-              <CardTitle className="text-gray-700 dark:text-gray-200 text-base font-medium">Video Information</CardTitle>
+            <CardHeader className="py-3 px-4 bg-gray-100 dark:bg-gray-700">
+              <CardTitle className="text-gray-700 dark:text-gray-200 text-base font-medium">Available Videos</CardTitle>
             </CardHeader>
             <CardContent className="p-4">
-              <dl className="grid grid-cols-1 gap-y-4">
-                <div>
-                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Title</dt>
-                  <dd className="mt-1 text-sm text-gray-900 dark:text-gray-200">{selectedVideo?.originalName || 'Untitled'}</dd>
+              {loadingVideos ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((n) => (
+                    <Skeleton key={n} className="h-10 w-full" />
+                  ))}
                 </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">File Size</dt>
-                  <dd className="mt-1 text-sm text-gray-900 dark:text-gray-200">
-                    {selectedVideo?.size ? `${Math.round(selectedVideo.size / (1024 * 1024) * 10) / 10} MB` : 'Unknown'}
-                  </dd>
+              ) : videos.length > 0 ? (
+                <div className="space-y-2">
+                  {videos.map((video) => (
+                    <SimpleVideoCard
+                      key={video.id}
+                      name={video.originalName}
+                      isActive={video.id === currentVideoId}
+                      onClick={() => setCurrentVideoId(video.id)}
+                    />
+                  ))}
                 </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Upload Date</dt>
-                  <dd className="mt-1 text-sm text-gray-900 dark:text-gray-200">
-                    {selectedVideo?.uploadDate 
-                      ? new Date(selectedVideo.uploadDate).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })
-                      : 'Unknown'
-                    }
-                  </dd>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No videos available</p>
+                  <p className="text-sm mt-2">Upload a video to get started</p>
                 </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Format</dt>
-                  <dd className="mt-1 text-sm text-gray-900 dark:text-gray-200">{selectedVideo?.mimeType || 'Unknown'}</dd>
-                </div>
-              </dl>
+              )}
             </CardContent>
           </Card>
-        )}
-
-        <Card>
-          <CardHeader className="py-3 px-3 bg-gray-100 dark:bg-gray-700">
-            <CardTitle className="text-gray-700 dark:text-gray-200 text-base font-medium">More Videos</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4">
-            {loadingVideos ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((n) => (
-                  <div key={n} className="py-3 flex items-center">
-                    <Skeleton className="w-16 h-9 mr-3" />
-                    <div>
-                      <Skeleton className="h-4 w-40 mb-2" />
-                      <Skeleton className="h-3 w-20" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : videos?.length ? (
-              <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                {videos.map((video) => (
-                  <VideoCard 
-                    key={video.id} 
-                    video={video} 
-                    isActive={video.id === selectedVideoId}
-                    onClick={() => setSelectedVideoId(video.id)} 
-                  />
-                ))}
-              </ul>
-            ) : (
-              <p className="py-3 text-center text-gray-500 dark:text-gray-400">No videos available</p>
-            )}
-          </CardContent>
-        </Card>
+        </div>
       </div>
     </section>
   );
