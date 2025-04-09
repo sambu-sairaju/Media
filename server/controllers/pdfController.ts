@@ -165,7 +165,9 @@ export const uploadPdf = async (req: Request, res: Response) => {
       mimeType: req.file.mimetype || 'application/pdf',
       size: req.file.size,
       fileType: 'pdf',
-      pageCount,
+      pageCount: pageCount || 1,
+      duration: null, // Not applicable for PDFs
+      resolution: null, // Not applicable for PDFs
     };
 
     // Validate with Zod schema

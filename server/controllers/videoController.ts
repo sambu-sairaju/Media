@@ -98,10 +98,6 @@ export const uploadVideo = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'No video file uploaded' });
     }
 
-    // Extract video metadata (duration, resolution, etc.)
-    const videoPath = req.file.path;
-    const metadata = await parseVideoMetadata(videoPath);
-    
     // Validate and prepare data for insertion
     const videoData = {
       filename: req.file.filename,
@@ -109,15 +105,31 @@ export const uploadVideo = async (req: Request, res: Response) => {
       mimeType: req.file.mimetype || getMimeType(req.file.originalname),
       size: req.file.size,
       fileType: 'video',
-      duration: metadata.duration || 0,
-      resolution: metadata.resolution || '',
+      duration: 0, // Default duration
+      resolution: '', // Default resolution
+      pageCount: null, // Not applicable for videos
     };
+    
+    try {
+      // Try to extract video metadata if possible
+      const videoPath = req.file.path;
+      const metadata = await parseVideoMetadata(videoPath);
+      if (metadata) {
+        videoData.duration = metadata.duration || 0;
+        videoData.resolution = metadata.resolution || '';
+      }
+    } catch (metadataError) {
+      console.warn('Could not extract video metadata:', metadataError);
+      // Continue without metadata - we'll use default values
+    }
 
     // Validate with Zod schema
     const validationResult = insertMediaFileSchema.safeParse(videoData);
     if (!validationResult.success) {
       // Delete the uploaded file if validation fails
-      fs.unlinkSync(videoPath);
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
       const validationError = fromZodError(validationResult.error);
       return res.status(400).json({ message: 'Invalid video data', errors: validationError.details });
     }

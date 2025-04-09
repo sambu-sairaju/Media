@@ -153,6 +153,7 @@ export const uploadRecording = async (req: Request, res: Response) => {
       filename: req.file.filename,
       size: req.file.size,
       duration,
+      format: 'audio/webm', // Add format which is required
     };
 
     // Validate with Zod schema
