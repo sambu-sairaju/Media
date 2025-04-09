@@ -45,25 +45,18 @@ const VideoPlayer = () => {
         description: "Your video has been uploaded and is now available for streaming.",
       });
       
-      // Force fetch the latest videos directly 
-      fetch('/api/videos')
-        .then(response => response.json())
-        .then(videos => {
-          // Update the videos list
-          queryClient.setQueryData(['/api/videos'], videos);
-          
-          // Select the newly uploaded video if valid
-          if (videos && videos.length > 0) {
-            // Find the video with matching ID or select the first one
-            const uploadedVideo = data && data.id ? 
-              videos.find((v: any) => v.id === data.id) : 
-              videos[0];
-              
-            if (uploadedVideo) {
-              setSelectedVideoId(uploadedVideo.id);
-            }
-          }
-        });
+      // Directly set the selected video ID from the upload response first
+      if (data && data.id) {
+        console.log("Setting video ID from upload response:", data.id);
+        setSelectedVideoId(data.id);
+      }
+      
+      // Then invalidate queries to refresh the video list
+      queryClient.invalidateQueries({ queryKey: ['/api/videos'] });
+      // Also refresh the selected video query
+      if (data && data.id) {
+        queryClient.invalidateQueries({ queryKey: ['/api/videos', data.id] });
+      }
     },
     onError: (error) => {
       toast({
@@ -89,17 +82,14 @@ const VideoPlayer = () => {
 
   // Select first video by default when videos are loaded
   useEffect(() => {
-    if (videos?.length && !selectedVideoId) {
-      setSelectedVideoId(videos[0].id);
+    if (videos?.length > 0) {
+      // Force-set the ID if one isn't selected or if the selection is invalid
+      if (!selectedVideoId || !videos.some(v => v.id === selectedVideoId)) {
+        console.log("Setting default video ID to:", videos[0].id);
+        setSelectedVideoId(videos[0].id);
+      }
     }
   }, [videos, selectedVideoId]);
-  
-  // Handle video selection refresh after upload
-  useEffect(() => {
-    if (videos?.length > 0 && selectedVideoId === undefined) {
-      setSelectedVideoId(videos[0].id);
-    }
-  }, [videos]);
 
   return (
     <section className="p-4 md:p-6 max-w-5xl mx-auto">

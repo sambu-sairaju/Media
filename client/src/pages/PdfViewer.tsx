@@ -50,25 +50,18 @@ const PdfViewer = () => {
         description: "Your PDF has been uploaded and is now available for viewing.",
       });
       
-      // Force fetch the latest PDFs directly 
-      fetch('/api/pdfs')
-        .then(response => response.json())
-        .then(pdfs => {
-          // Update the PDF list
-          queryClient.setQueryData(['/api/pdfs'], pdfs);
-          
-          // Select the newly uploaded PDF if valid
-          if (pdfs && pdfs.length > 0) {
-            // Find the PDF with matching ID or select the first one
-            const uploadedPdf = data && data.id ? 
-              pdfs.find((p: any) => p.id === data.id) : 
-              pdfs[0];
-              
-            if (uploadedPdf) {
-              setSelectedPdfId(uploadedPdf.id);
-            }
-          }
-        });
+      // Directly set the selected PDF ID from the upload response first
+      if (data && data.id) {
+        console.log("Setting PDF ID from upload response:", data.id);
+        setSelectedPdfId(data.id);
+      }
+      
+      // Then invalidate queries to refresh the PDF list
+      queryClient.invalidateQueries({ queryKey: ['/api/pdfs'] });
+      // Also refresh the selected PDF query
+      if (data && data.id) {
+        queryClient.invalidateQueries({ queryKey: ['/api/pdfs', data.id] });
+      }
     },
     onError: (error) => {
       toast({
@@ -94,8 +87,12 @@ const PdfViewer = () => {
 
   // Select first PDF by default when PDFs are loaded
   useEffect(() => {
-    if (pdfFiles?.length && !selectedPdfId) {
-      setSelectedPdfId(pdfFiles[0].id);
+    if (pdfFiles?.length > 0) {
+      // Force-set the ID if one isn't selected or if the selection is invalid
+      if (!selectedPdfId || !pdfFiles.some(p => p.id === selectedPdfId)) {
+        console.log("Setting default PDF ID to:", pdfFiles[0].id);
+        setSelectedPdfId(pdfFiles[0].id);
+      }
     }
   }, [pdfFiles, selectedPdfId]);
 
