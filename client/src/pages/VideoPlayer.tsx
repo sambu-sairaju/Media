@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import VideoCard from "../components/video/VideoCard";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -67,9 +67,11 @@ const VideoPlayer = () => {
   };
 
   // Select first video by default when videos are loaded
-  if (videos?.length && !selectedVideoId && !selectedVideo) {
-    setSelectedVideoId(videos[0].id);
-  }
+  useEffect(() => {
+    if (videos?.length && !selectedVideoId) {
+      setSelectedVideoId(videos[0].id);
+    }
+  }, [videos, selectedVideoId]);
 
   return (
     <section className="p-4 md:p-6 max-w-5xl mx-auto">

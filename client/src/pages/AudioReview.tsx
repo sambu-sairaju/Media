@@ -101,6 +101,12 @@ const AudioReview = () => {
   const handleDelete = () => {
     if (selectedRecording) {
       deleteMutation.mutate(selectedRecording.id);
+      // Clear the selected recording to prevent double deletion
+      setSelectedRecording(null);
+      // Also clear playing recording if it's the same one
+      if (playingRecording && playingRecording.id === selectedRecording.id) {
+        setPlayingRecording(null);
+      }
     }
   };
 

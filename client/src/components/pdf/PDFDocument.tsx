@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Document, Page, pdfjs } from 'react-pdf';
 
 // Set up PDFJS worker source
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 interface PDFDocumentProps {
   selectedPdf: MediaFile | undefined;
