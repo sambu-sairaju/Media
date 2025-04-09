@@ -38,31 +38,31 @@ const VideoPlayer = () => {
       return await response.json();
     },
     onSuccess: (data) => {
-      // First get the full list of videos, then select one
-      queryClient.invalidateQueries({ queryKey: ['/api/videos'] });
+      // Show success toast
+      toast({
+        title: "Video uploaded successfully",
+        description: "Your video has been uploaded and is now available for streaming.",
+      });
       
-      // Make sure we have a valid ID before setting it
-      if (data && data.id) {
-        setSelectedVideoId(data.id);
-        toast({
-          title: "Video uploaded successfully",
-          description: "Your video has been uploaded and is now available for streaming.",
-        });
-      } else {
-        // Fetch videos again to get a valid ID
-        fetch('/api/videos')
-          .then(response => response.json())
-          .then(videos => {
-            if (videos && videos.length > 0) {
-              setSelectedVideoId(videos[0].id);
+      // Force fetch the latest videos directly 
+      fetch('/api/videos')
+        .then(response => response.json())
+        .then(videos => {
+          // Update the videos list
+          queryClient.setQueryData(['/api/videos'], videos);
+          
+          // Select the newly uploaded video if valid
+          if (videos && videos.length > 0) {
+            // Find the video with matching ID or select the first one
+            const uploadedVideo = data && data.id ? 
+              videos.find((v: any) => v.id === data.id) : 
+              videos[0];
+              
+            if (uploadedVideo) {
+              setSelectedVideoId(uploadedVideo.id);
             }
-          });
-        
-        toast({
-          title: "Video processed",
-          description: "Your video has been uploaded and is being prepared for streaming.",
+          }
         });
-      }
     },
     onError: (error) => {
       toast({

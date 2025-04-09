@@ -2,10 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import type { MediaFile } from '@shared/schema';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Document, Page, pdfjs } from 'react-pdf';
 
-// Use a much simpler and more reliable approach to initialize the worker
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+// Completely remove the react-pdf dependency that's causing problems
 
 interface PDFDocumentProps {
   selectedPdf: MediaFile | undefined;
@@ -45,6 +43,8 @@ const PDFDocument: React.FC<PDFDocumentProps> = ({
     setRenderError(error);
   };
 
+  // Use a simple iframe to display PDFs instead of react-pdf
+  // This is a much more reliable approach that works in all browsers
   return (
     <div className="pdf-container bg-gray-50 dark:bg-gray-900 p-4 flex justify-center min-h-[60vh]">
       <div className="relative w-full max-w-3xl">
@@ -53,37 +53,20 @@ const PDFDocument: React.FC<PDFDocumentProps> = ({
             <Skeleton className="w-full h-full" />
           </div>
         ) : selectedPdf ? (
-          <div className="aspect-[8.5/11] w-full bg-white dark:bg-gray-800 shadow-lg flex items-center justify-center overflow-hidden">
-            {renderError ? (
-              <div className="flex flex-col items-center justify-center text-red-500 p-4">
-                <span className="material-icons text-4xl mb-2">error_outline</span>
-                <p className="text-center">Failed to load PDF. Please try again later.</p>
-                <p className="text-sm text-gray-500 mt-2">{renderError.message}</p>
-              </div>
-            ) : (
-              <Document
-                file={`/api/pdfs/${selectedPdf.id}/view`}
-                onLoadSuccess={handleDocumentLoadSuccess}
-                onLoadError={handleDocumentLoadError}
-                loading={<div className="w-full h-full flex items-center justify-center"><span className="material-icons text-4xl animate-spin text-gray-400">autorenew</span></div>}
-                className="w-full h-full flex items-center justify-center"
-              >
-                {pageLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-800">
-                    <span className="material-icons text-4xl animate-spin text-gray-400">autorenew</span>
-                  </div>
-                )}
-                <Page
-                  pageNumber={currentPage}
-                  scale={zoom}
-                  onLoadSuccess={handlePageLoadSuccess}
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
-                  canvasRef={canvasRef}
-                  className="max-w-full max-h-full"
-                />
-              </Document>
-            )}
+          <div className="w-full bg-white dark:bg-gray-800 shadow-lg flex flex-col items-center justify-center overflow-hidden" style={{ height: '70vh' }}>
+            <iframe
+              src={`/api/pdfs/${selectedPdf.id}/view`}
+              className="w-full h-full border-0"
+              title="PDF Viewer"
+              onLoad={() => {
+                setPageLoading(false);
+                setRenderError(null);
+              }}
+              onError={(e) => {
+                console.error('Error loading PDF:', e);
+                setRenderError(new Error('Failed to load PDF'));
+              }}
+            />
           </div>
         ) : (
           <div className="aspect-[8.5/11] w-full bg-white dark:bg-gray-800 shadow-lg flex items-center justify-center overflow-hidden">
@@ -91,17 +74,23 @@ const PDFDocument: React.FC<PDFDocumentProps> = ({
           </div>
         )}
         
-        {selectedPdf && !loading && !renderError && (
-          <div className="absolute bottom-4 right-4">
-            <Button
-              id="download-page"
-              variant="secondary"
-              onClick={onDownloadPage}
-              className="bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium shadow-md inline-flex items-center text-sm"
-            >
-              <span className="material-icons mr-1 text-sm">file_download</span>
-              <span>Download Page</span>
-            </Button>
+        {selectedPdf && !loading && (
+          <div className="mt-4 flex justify-between items-center">
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDownloadPage()}
+                className="bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium inline-flex items-center text-sm"
+              >
+                <span className="material-icons mr-1 text-sm">file_download</span>
+                <span>Download PDF</span>
+              </Button>
+            </div>
+            
+            <div className="text-sm text-gray-600 dark:text-gray-300">
+              {selectedPdf.originalName}
+            </div>
           </div>
         )}
       </div>
