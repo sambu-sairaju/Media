@@ -92,6 +92,13 @@ const VideoPlayer = () => {
       setSelectedVideoId(videos[0].id);
     }
   }, [videos, selectedVideoId]);
+  
+  // Handle video selection refresh after upload
+  useEffect(() => {
+    if (videos?.length > 0 && selectedVideoId === undefined) {
+      setSelectedVideoId(videos[0].id);
+    }
+  }, [videos]);
 
   return (
     <section className="p-4 md:p-6 max-w-5xl mx-auto">
