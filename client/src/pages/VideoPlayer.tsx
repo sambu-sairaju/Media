@@ -137,7 +137,7 @@ const VideoPlayer = () => {
               className="w-full h-full"
               controls
               autoPlay
-              src={`/api/videos/${selectedVideo.id}/stream`}
+              src={`/api/videos/${selectedVideo?.id}/stream`}
             >
               Your browser does not support the video tag.
             </video>

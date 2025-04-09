@@ -4,9 +4,8 @@ import type { MediaFile } from '@shared/schema';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Document, Page, pdfjs } from 'react-pdf';
 
-// Set up PDFJS worker source
-// Manual setup to avoid CORS issues
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Set up PDFJS worker with a reliable CDN that works with React
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 interface PDFDocumentProps {
   selectedPdf: MediaFile | undefined;
