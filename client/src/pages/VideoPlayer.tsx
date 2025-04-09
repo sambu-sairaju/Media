@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import type { MediaFile } from "@shared/schema";
 import VideoCard from "../components/video/VideoCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,12 +14,12 @@ const VideoPlayer = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const { data: videos, isLoading: loadingVideos } = useQuery({
+  const { data: videos = [], isLoading: loadingVideos } = useQuery<MediaFile[]>({
     queryKey: ['/api/videos'],
     staleTime: 60000, // 1 minute
   });
 
-  const { data: selectedVideo, isLoading: loadingSelectedVideo } = useQuery({
+  const { data: selectedVideo, isLoading: loadingSelectedVideo } = useQuery<MediaFile>({
     queryKey: ['/api/videos', selectedVideoId],
     enabled: !!selectedVideoId,
   });
@@ -117,10 +118,10 @@ const VideoPlayer = () => {
           ) : selectedVideo && (
             <div className="flex items-center">
               <span className="text-sm text-gray-500 dark:text-gray-400 mr-3">
-                Duration: {Math.floor(selectedVideo.duration / 60)}:{String(selectedVideo.duration % 60).padStart(2, '0')}
+                Duration: {selectedVideo && selectedVideo.duration ? `${Math.floor(selectedVideo.duration / 60)}:${String(selectedVideo.duration % 60).padStart(2, '0')}` : '0:00'}
               </span>
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                {selectedVideo.resolution}
+                {selectedVideo?.resolution || 'Unknown'}
               </span>
             </div>
           )}
@@ -158,25 +159,30 @@ const VideoPlayer = () => {
               <dl className="grid grid-cols-1 gap-y-4">
                 <div>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Title</dt>
-                  <dd className="mt-1 text-sm text-gray-900 dark:text-gray-200">{selectedVideo.originalName}</dd>
+                  <dd className="mt-1 text-sm text-gray-900 dark:text-gray-200">{selectedVideo?.originalName || 'Untitled'}</dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">File Size</dt>
-                  <dd className="mt-1 text-sm text-gray-900 dark:text-gray-200">{Math.round(selectedVideo.size / (1024 * 1024) * 10) / 10} MB</dd>
+                  <dd className="mt-1 text-sm text-gray-900 dark:text-gray-200">
+                    {selectedVideo?.size ? `${Math.round(selectedVideo.size / (1024 * 1024) * 10) / 10} MB` : 'Unknown'}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Upload Date</dt>
                   <dd className="mt-1 text-sm text-gray-900 dark:text-gray-200">
-                    {new Date(selectedVideo.uploadDate).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
+                    {selectedVideo?.uploadDate 
+                      ? new Date(selectedVideo.uploadDate).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })
+                      : 'Unknown'
+                    }
                   </dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Format</dt>
-                  <dd className="mt-1 text-sm text-gray-900 dark:text-gray-200">{selectedVideo.mimeType}</dd>
+                  <dd className="mt-1 text-sm text-gray-900 dark:text-gray-200">{selectedVideo?.mimeType || 'Unknown'}</dd>
                 </div>
               </dl>
             </CardContent>

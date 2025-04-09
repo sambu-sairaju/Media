@@ -101,6 +101,7 @@ const WebGLViewer = () => {
         <div>
           <h1 className="text-2xl font-medium bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">WebGL Viewer</h1>
           <p className="text-gray-600 dark:text-gray-300 mt-1">Explore 3D models and WebGL content</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Supported formats: GLB, GLTF, OBJ, FBX (max 50MB)</p>
         </div>
         <div>
           <Button

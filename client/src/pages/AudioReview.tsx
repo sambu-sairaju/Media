@@ -31,7 +31,7 @@ const AudioReview = () => {
   const { toast } = useToast();
   const itemsPerPage = 5;
 
-  const { data: recordings, isLoading } = useQuery({
+  const { data: recordings = [], isLoading } = useQuery<AudioRecording[]>({
     queryKey: ['/api/audio-recordings'],
     staleTime: 10000,
   });
@@ -118,7 +118,7 @@ const AudioReview = () => {
     window.open(`/api/audio-recordings/${recording.id}/download`, '_blank');
   };
   
-  const filteredRecordings = recordings ? recordings.filter(recording => {
+  const filteredRecordings = recordings.filter((recording: AudioRecording) => {
     // Search by name
     const matchesSearch = recording.name.toLowerCase().includes(searchQuery.toLowerCase());
     
@@ -144,7 +144,7 @@ const AudioReview = () => {
     }
     
     return matchesSearch && matchesTimeFilter;
-  }) : [];
+  });
   
   // Pagination
   const totalPages = Math.ceil((filteredRecordings?.length || 0) / itemsPerPage);
