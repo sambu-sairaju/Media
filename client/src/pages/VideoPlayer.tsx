@@ -5,6 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Super simple video player component
 const SimpleVideo = ({ videoSrc }: { videoSrc: string }) => {
@@ -25,20 +35,32 @@ const SimpleVideo = ({ videoSrc }: { videoSrc: string }) => {
 const SimpleVideoCard = ({ 
   name, 
   isActive = false, 
-  onClick 
+  onClick,
+  onDelete
 }: { 
   name: string; 
   isActive?: boolean; 
   onClick: () => void;
+  onDelete: () => void;
 }) => {
   return (
     <div 
       className={`p-2 cursor-pointer rounded ${isActive ? 'bg-primary/10' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-      onClick={onClick}
     >
-      <div className="flex items-center">
-        <span className="material-icons mr-2 text-gray-500">movie</span>
-        <span className="truncate">{name}</span>
+      <div className="flex justify-between items-center">
+        <div className="flex items-center overflow-hidden" onClick={onClick}>
+          <span className="material-icons mr-2 text-gray-500">movie</span>
+          <span className="truncate">{name}</span>
+        </div>
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="text-gray-500 hover:text-red-500 focus:outline-none"
+        >
+          <span className="material-icons text-sm">delete</span>
+        </button>
       </div>
     </div>
   );
@@ -49,6 +71,9 @@ const VideoPlayer = () => {
   const [videos, setVideos] = useState<MediaFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [videoToDelete, setVideoToDelete] = useState<MediaFile | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -136,9 +161,82 @@ const VideoPlayer = () => {
 
   // Current selected video
   const currentVideo = videos.find(v => v.id === currentVideoId) || (videos.length > 0 ? videos[0] : null);
+  
+  // Open delete confirmation dialog
+  const openDeleteDialog = (video: MediaFile) => {
+    setVideoToDelete(video);
+    setShowDeleteDialog(true);
+  };
+  
+  // Handle video deletion
+  const handleDeleteVideo = async () => {
+    if (!videoToDelete) return;
+    
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/videos/${videoToDelete.id}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Video deleted",
+          description: `${videoToDelete.originalName} has been deleted.`,
+        });
+        
+        // If we just deleted the currently selected video, reset the selection
+        if (currentVideoId === videoToDelete.id) {
+          setCurrentVideoId(null);
+        }
+        
+        // Refresh the video list
+        await fetchVideos();
+      } else {
+        toast({
+          title: "Delete failed",
+          description: "Could not delete the video. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting video:", error);
+      toast({
+        title: "Delete failed",
+        description: "An error occurred while deleting the video.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+      setShowDeleteDialog(false);
+      setVideoToDelete(null);
+    }
+  };
 
   return (
     <section className="p-4 md:p-6 max-w-5xl mx-auto">
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the video <strong>{videoToDelete?.originalName}</strong>.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteVideo} 
+              disabled={deleting}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
       <header className="mb-6 flex flex-wrap justify-between items-center gap-4">
         <div>
           <h1 className="text-2xl font-medium bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">Video Streaming</h1>
@@ -208,6 +306,7 @@ const VideoPlayer = () => {
                       name={video.originalName}
                       isActive={video.id === currentVideoId}
                       onClick={() => setCurrentVideoId(video.id)}
+                      onDelete={() => openDeleteDialog(video)}
                     />
                   ))}
                 </div>

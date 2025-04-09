@@ -4,26 +4,48 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { MediaFile } from "@shared/schema";
 
 // Simple PDF card component
 const SimplePdfCard = ({ 
   name, 
   isActive = false, 
-  onClick 
+  onClick,
+  onDelete
 }: { 
   name: string; 
   isActive?: boolean; 
   onClick: () => void;
+  onDelete: () => void;
 }) => {
   return (
     <div 
       className={`p-2 cursor-pointer rounded ${isActive ? 'bg-primary/10' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-      onClick={onClick}
     >
-      <div className="flex items-center">
-        <span className="material-icons mr-2 text-gray-500">description</span>
-        <span className="truncate">{name}</span>
+      <div className="flex justify-between items-center">
+        <div className="flex items-center overflow-hidden" onClick={onClick}>
+          <span className="material-icons mr-2 text-gray-500">description</span>
+          <span className="truncate">{name}</span>
+        </div>
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="text-gray-500 hover:text-red-500 focus:outline-none"
+        >
+          <span className="material-icons text-sm">delete</span>
+        </button>
       </div>
     </div>
   );
@@ -34,6 +56,9 @@ const PdfViewer = () => {
   const [pdfs, setPdfs] = useState<MediaFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [pdfToDelete, setPdfToDelete] = useState<MediaFile | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -128,9 +153,82 @@ const PdfViewer = () => {
       window.open(`/api/pdfs/${currentPdf.id}/download`, '_blank');
     }
   };
+  
+  // Open delete confirmation dialog
+  const openDeleteDialog = (pdf: MediaFile) => {
+    setPdfToDelete(pdf);
+    setShowDeleteDialog(true);
+  };
+  
+  // Handle PDF deletion
+  const handleDeletePdf = async () => {
+    if (!pdfToDelete) return;
+    
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/pdfs/${pdfToDelete.id}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "PDF deleted",
+          description: `${pdfToDelete.originalName} has been deleted.`,
+        });
+        
+        // If we just deleted the currently selected PDF, reset the selection
+        if (currentPdfId === pdfToDelete.id) {
+          setCurrentPdfId(null);
+        }
+        
+        // Refresh the PDF list
+        await fetchPdfs();
+      } else {
+        toast({
+          title: "Delete failed",
+          description: "Could not delete the PDF. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting PDF:", error);
+      toast({
+        title: "Delete failed",
+        description: "An error occurred while deleting the PDF.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+      setShowDeleteDialog(false);
+      setPdfToDelete(null);
+    }
+  };
 
   return (
     <section className="p-4 md:p-6 max-w-5xl mx-auto">
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the PDF <strong>{pdfToDelete?.originalName}</strong>.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeletePdf} 
+              disabled={deleting}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    
       <header className="mb-6 flex flex-wrap justify-between items-center gap-4">
         <div>
           <h1 className="text-2xl font-medium bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">PDF Viewer</h1>
@@ -217,6 +315,7 @@ const PdfViewer = () => {
                       name={pdf.originalName}
                       isActive={pdf.id === currentPdfId}
                       onClick={() => setCurrentPdfId(pdf.id)}
+                      onDelete={() => openDeleteDialog(pdf)}
                     />
                   ))}
                 </div>
